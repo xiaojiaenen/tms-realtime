@@ -24,4 +24,7 @@ public class TmsConfigDimBean {
 
     // 需要的主键
     String sinkPk;
+
+    //关键外键列表
+    String foreignKeys;
 }

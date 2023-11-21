@@ -168,6 +168,37 @@ public class MyBroadcastProcessFunction extends BroadcastProcessFunction<JSONObj
             String sinkPk = tmsConfigDimBean.getSinkPk();
             after.put("sink_table",sinkTable);
             after.put("sink_pk",sinkPk);
+
+            //清除Redis缓存的准备工作(传递操作类型----传递可以用于查询当前维度表的外键字段名以及对应的值)
+            String op = jsonObject.getString("op");
+            if("u".equals(op)){
+                //将操作类型传递到下游
+                after.put("op",op);
+
+                //从配置表中获取当前维度表关联的外键名
+                String foreignKeys = tmsConfigDimBean.getForeignKeys();
+                //定义一个json对象，用于存储当前维度表对应的外键名以及外键值
+                JSONObject foreignJsonObj = new JSONObject();
+                if(StringUtils.isNotEmpty(foreignKeys)){
+                    String[] foreignNameArr = foreignKeys.split(",");
+                    for (String foreignName : foreignNameArr) {
+                        //获取修改前的数据
+                        JSONObject before = jsonObject.getJSONObject("before");
+                        //获取外键修改前的值
+                        String foreignKeyBefore = before.getString(foreignName);
+                        //获取外键修改后的值
+                        String foreignKeyAfter = after.getString(foreignName);
+                        if(!foreignKeyBefore.equals(foreignKeyAfter)){
+                            //如果修改的是外键
+                            foreignJsonObj.put(foreignName,foreignKeyBefore);
+                        }else{
+                            foreignJsonObj.put(foreignName,foreignKeyAfter);
+                        }
+                    }
+                }
+                after.put("foreign_key",foreignJsonObj);
+            }
+
             //将维度数据传递到下游
             collector.collect(after);
         }

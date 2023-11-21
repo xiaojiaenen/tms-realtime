@@ -139,11 +139,11 @@ public class DwdBoundRelevantApp {
         //中转域出库事实主题
         String outboundTopic = "tms_dwd_bound_outbound";
 
-        inboundDS.print(">>>");
+//        inboundDS.print(">>>");
         inboundDS.sinkTo(KafkaUtil.getKafkaSink(inboundTopic, args)).uid("inbound_sink");
         sortDS.print("###");
         sortDS.sinkTo(KafkaUtil.getKafkaSink(sortTopic, args)).uid("sort_sink");
-        outboundDS.print("@@@");
+//        outboundDS.print("@@@");
         outboundDS.sinkTo(KafkaUtil.getKafkaSink(outboundTopic, args)).uid("outbound_sink");
 
         env.execute();

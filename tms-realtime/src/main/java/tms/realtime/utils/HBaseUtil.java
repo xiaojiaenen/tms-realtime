@@ -1,9 +1,11 @@
 package tms.realtime.utils;
 
+import com.alibaba.fastjson.JSONObject;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import tms.realtime.common.TmsConfig;
 
@@ -82,6 +84,98 @@ public class HBaseUtil {
                 }
             }
         }
+    }
+
+    /**
+     * 根据主键从hbase中查询一行数据
+     *
+     * @param namespace        命名空间
+     * @param tableName        表名
+     * @param rowKeyNameAndKey 主键名称和值
+     * @return json对象
+     */
+    public static JSONObject getRowByPrimaryKey(String namespace, String tableName, Tuple2<String, String> rowKeyNameAndKey) {
+        Table table = null;
+        JSONObject dimJsonObj = null;
+        String rowKeyName = rowKeyNameAndKey.f0;
+        String rowKeyValue = rowKeyNameAndKey.f1;
+
+        try {
+            table = conn.getTable(TableName.valueOf(namespace, tableName));
+            Get get = new Get(Bytes.toBytes(rowKeyValue));
+            Result result = table.get(get);
+            Cell[] cells = result.rawCells();
+            if (cells.length > 0) {
+                dimJsonObj = new JSONObject();
+                dimJsonObj.put(rowKeyName, rowKeyValue);
+                for (Cell cell : cells) {
+                    dimJsonObj.put(Bytes.toString(CellUtil.cloneQualifier(cell)), Bytes.toString(CellUtil.cloneValue(cell)));
+                }
+            } else {
+                System.out.println("从hbase表中没有找到对应维度数据");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            if (table != null) {
+                try {
+                    table.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return dimJsonObj;
+    }
+
+    /**
+     * 根据外键从hbase中查询一行数据
+     *
+     * @param namespace            命名空间
+     * @param tableName            表名
+     * @param foreignKeyNameAndKey 主键名称和值
+     * @return json对象
+     */
+    public static JSONObject getRowByForeignKey(String namespace, String tableName, Tuple2<String, String> foreignKeyNameAndKey) {
+        Table table = null;
+        JSONObject dimJsonObj = null;
+        String foreignKeyName = foreignKeyNameAndKey.f0;
+        String foreignKeyValue = foreignKeyNameAndKey.f1;
+
+        try {
+            table = conn.getTable(TableName.valueOf(namespace, tableName));
+            Scan scan = new Scan();
+            SingleColumnValueFilter filter
+                    = new SingleColumnValueFilter(Bytes.toBytes("info"), Bytes.toBytes(foreignKeyName)
+                    , CompareOperator.EQUAL, Bytes.toBytes(foreignKeyValue));
+            filter.setFilterIfMissing(true);
+            scan.setFilter(filter);
+            ResultScanner scanner = table.getScanner(scan);
+            Result result = scanner.next();
+            if (result != null) {
+                Cell[] cells = result.rawCells();
+                if (cells.length > 0) {
+                    dimJsonObj = new JSONObject();
+                    dimJsonObj.put("id", Bytes.toString(result.getRow()));
+                    for (Cell cell : cells) {
+                        dimJsonObj.put(Bytes.toString(CellUtil.cloneQualifier(cell)), Bytes.toString(CellUtil.cloneValue(cell)));
+                    }
+                }
+            } else {
+                System.out.println("从hbase表中没有找到对应维度数据");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            if (table != null) {
+                try {
+                    table.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return dimJsonObj;
     }
 
 }

@@ -1,16 +1,15 @@
 package tms.realtime.beans;
 
-import lombok.Builder;
-import lombok.Data;
-
 /**
  * @author xiaojia
- * @date 2023/11/14 16:50
- * @desc 中转域：机构粒度分拣业务过程聚合统计实体类
+ * @date 2023/11/17 15:27
+ * @desc 物流域机构派送成功统计实体类
  */
+import lombok.Builder;
+import lombok.Data;
 @Data
 @Builder
-public class DwsBoundOrgSortDayBean {
+public class DwsTransOrgDeliverSucDayBean {
     // 统计日期
     String curDate;
 
@@ -20,9 +19,9 @@ public class DwsBoundOrgSortDayBean {
     // 机构名称
     String orgName;
 
-    // 用于关联获取省份信息的机构 ID
+    // 地区 ID
     @TransientSink
-    String joinOrgId;
+    String districtId;
 
     // 城市 ID
     String cityId;
@@ -36,8 +35,8 @@ public class DwsBoundOrgSortDayBean {
     // 省份名称
     String provinceName;
 
-    // 分拣次数
-    Long sortCountBase;
+    // 派送成功次数
+    Long deliverSucCountBase;
 
     // 时间戳
     Long ts;
